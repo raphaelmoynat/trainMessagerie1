@@ -2,6 +2,7 @@ let token = null
 let content = document.querySelector('.content')
 let messageId = null
 
+
 function run(){
     if (token==null){
         return loginForm()
@@ -10,6 +11,8 @@ function run(){
         fetchMessages().then(data=>{generateConv(data)
             createFormMessage()
             deleteButton()
+            editButtons()
+            replyButtons()
 
         })
 
@@ -73,27 +76,36 @@ function login(){
 
 function generateMessage(message){
     let deleteButton = ""
+    let editButton=""
+    let replyButton = ""
+    let content = `${message.content}`
 
     if (message.author.username==userName){
         deleteButton = `<button type="button" class="btn btn-primary delete" id="${message.id}">Supprimer</button>`
+        editButton = `<button type="button" class="btn btn-secondary edit" id="${message.id}">Editer</button> `
+    }else{
+        replyButton = `<button type="button" class="btn btn-secondary reply" id="${message.id}">Répondre</button> `
     }
 
     let messageTemplate =`
         
-        <div class="d-flex justify-content-between align-items-center mb-2 message" id="message-${message.id}">
+        <div class="d-flex justify-content-between align-items-center mb-2 message" id="${message.id}">
            
             <div class="fs-5 d-flex col-10">
                 <div class="col-4">${message.author.username} : </div> 
-                <div class="col-6">${message.content}</div>
+                <div class="col-6">${content}</div>
                 
             </div>
             <div class="d-flex">
                <div>${deleteButton}</div>
-                
+                <div>${editButton}</div>
+                <div>${replyButton}</div>
             </div>
             
         </div>
     `
+    replyButtons(content)
+
     return messageTemplate
 }
 
@@ -108,6 +120,7 @@ function generateConv(messages){
 }
 
 async function fetchMessages(){
+
     const params = {
         headers : {"Content-type":"application/json",
             "Authorization":`Bearer ${token}`},
@@ -190,6 +203,57 @@ function deleteButton() {
             console.log("coucou")
             const messageId = button.id
             deleteMessage(messageId)
+        })
+    })
+}
+
+async function editMessage(content, idMessage){
+    const modifiedMessage = {
+        content: content + " (edited)"
+    }
+    const messageParams = {
+        headers : {"Content-type":"application/json",
+            "Authorization":`Bearer ${token}`},
+        method : "PUT",
+        body : JSON.stringify(modifiedMessage)
+    }
+
+    return await fetch(`https://b1messenger.imatrythis.com/api/messages/${idMessage}/edit`, messageParams)
+        .then(response => response.json())
+        .then(data=>{
+            console.log(data)
+            run()
+        })
+}
+
+function editButtons() {
+    let editContent=""
+    const editButtons = document.querySelectorAll('.edit')
+    editButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            console.log("coucou")
+            messageId = button.id
+            editContent = window.prompt("Entrez Votre modification")
+            editMessage(editContent.toLowerCase(), messageId)
+        })
+    })
+}
+
+
+async function replyMessage(){
+
+}
+
+
+function replyButtons() {
+    const replyButtons = document.querySelectorAll('.reply')
+
+    replyButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const messageId = button.dataset.messageId
+            console.log(message.id)
+
+
         })
     })
 }

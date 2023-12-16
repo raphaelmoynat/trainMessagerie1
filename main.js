@@ -14,6 +14,7 @@ function run(){
             deleteButton()
             editButtons()
             replyButtons()
+            reactionToMessageButtons()
 
         })
 
@@ -149,6 +150,7 @@ function generateMessage(message){
     let deleteButton = ""
     let editButton=""
     let replyButton = ""
+    let reactionButton=""
 
 
     if (message.author.username==userName){
@@ -156,6 +158,7 @@ function generateMessage(message){
         editButton = `<i class="bi bi-pencil edit fs-4" style="cursor: pointer;" id="${message.id}"></i>`
     }else{
         replyButton = `<i class="bi bi-arrow-up-right reply fs-5" style="cursor: pointer;" data-message-id="${message.id}" data-message-content="${content}"></i>`
+        reactionButton = `<i class="bi bi-emoji-smile reaction fs-5" style="cursor: pointer;" data-message-id="${message.id}"></i>`
     }
 
     let responsesContent = "";
@@ -164,10 +167,10 @@ function generateMessage(message){
         message.responses.forEach(response => {
             if (response.author && response.content) {
                 responsesContent += `
-                    <div class="d-flex">
-                        <div class="me-1">${response.author.username}  : </div>
-                        <div class="">${response.content}</div>
-                    </div>`;
+                    <div class="d-flex ">
+                        <div class="me-1 fs-6 col-5">${response.author.username}  : </div>
+                        <div class="fs-6 col-7">${response.content}</div>
+                    </div>`
             }
         })
     }
@@ -180,7 +183,7 @@ function generateMessage(message){
                 <div class="fs-5 d-flex col-10">
             
                         <div class="col-4">${message.author.username} : </div>
-                        <div class="col-6 d-flex flex-column">
+                        <div class="col-8 d-flex flex-column">
                             <div class="mb-2">${message.content}</div>
                             ${responsesContent}
                         </div>
@@ -189,7 +192,8 @@ function generateMessage(message){
                 <div class="d-flex">
                     <div class="mr-1">${deleteButton}</div>
                     <div>${editButton}</div>
-                    <div>${replyButton}</div>
+                    <div class="me-1">${replyButton}</div>
+                    <div>${reactionButton}</div>
                 </div>
 
 
@@ -361,6 +365,53 @@ function replyButtons() {
             const messageId = button.dataset.messageId
             replyContent = window.prompt("Entrez Votre réponse au message :")
             replyMessage(replyContent.toLowerCase(), messageId)
+        })
+    })
+
+}
+
+async function reactionToMessage(reactionType, idMessage){
+
+    const messageParams = {
+        headers : {"Content-type":"application/json",
+            "Authorization":`Bearer ${token}`},
+        method : "GET",
+    }
+
+    return await fetch(`https://b1messenger.imatrythis.com/api/reaction/message/${idMessage}/${reactionType}`, messageParams)
+        .then(response => response.json())
+        .then(data=>{
+            console.log(data)
+            run();
+        })
+
+}
+
+function reactionToMessageButtons() {
+
+    const replyButtons = document.querySelectorAll('.reaction')
+
+    replyButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const messageId = button.dataset.messageId
+            const { value: reaction } = Swal.fire({
+                title: "Réagir",
+                input: "select",
+                inputOptions: {
+                    lol : "lol",
+                    sad : "sad",
+                    blush : "blush"
+                },
+                inputPlaceholder: "Selectionner une réaction",
+                showCancelButton: true,
+                inputValidator: (value) => {
+                    return new Promise((resolve) => {
+                        resolve()
+                        console.log(value)
+                        reactionToMessage(value, messageId)
+                    });
+                }
+            });
         })
     })
 

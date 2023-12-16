@@ -1,8 +1,9 @@
 let token = null
 let content = document.querySelector('.content')
 let messageId = null
+let userName = ""
 
-
+registerForm()
 function run(){
     if (token==null){
         return loginForm()
@@ -19,32 +20,102 @@ function run(){
     }
 }
 
-run()
+
 
 function render(pageContent){
     content.innerHTML=""
     content.innerHTML = pageContent
 }
 
+function registerForm(){
+
+    let templateRegister = `              
+          <div class="mt-5">
+            <div class="mb-3"><h3>S'inscrire</h3></div>
+            <label for="exampleInputEmail1" class="form-label">Pseudo</label>
+            <input type="text" class="form-control" id="usernameRegister">
+          <div class="mb-3">
+            <label for="exampleInputPassword1" class="form-label">Password</label>
+            <input type="text" class="form-control" id="passwordRegister">
+          </div>
+          <button type="submit" class="btn btn-primary mb-3" id="btnRegister">S'inscrire </button>  
+          <br>
+          <a type="submit" class="btn btn-link" id="linkLogin">Vous avez déjà un compte ? Se connecter</a>
+    `
+
+
+    render(templateRegister)
+    const linkLogin = document.querySelector('#linkLogin')
+    linkLogin.addEventListener('click', ()=>{
+        loginForm()
+    })
+
+    const registerBtn = document.querySelector('#btnRegister')
+    registerBtn.addEventListener('click', ()=>{
+        register()
+        console.log('coucou')
+    })
+
+}
+
+function register(){
+    const username= document.querySelector('#usernameRegister')
+    const password= document.querySelector('#passwordRegister')
+
+    let corpsRegister = {
+        username : username.value,
+        password : password.value
+    }
+
+    let params = {
+        method : 'POST',
+        headers : {"Content-type":"application/json"},
+        body : JSON.stringify(corpsRegister)
+    }
+
+    fetch('https://b1messenger.imatrythis.com/register', params)
+        .then(response=>response.json())
+        .then(data=>{
+            if(data == "username already taken"){
+                console.log('déja pris')
+                alert('username déjà pris, veuillez réessayer')
+                return registerForm()
+            }else{
+                return loginForm()
+            }
+        })
+
+}
+
 function loginForm(){
     let templateLogin = `              
           <div class="mt-5">
+          <div class="mb-3"><h3>Se connecter</h3></div>
             <label for="exampleInputEmail1" class="form-label">Pseudo</label>
             <input type="text" class="form-control" id="username">
           <div class="mb-3">
             <label for="exampleInputPassword1" class="form-label">Password</label>
             <input type="password" class="form-control" id="password">
           </div>
-          <button type="submit" class="btn btn-primary" id="btnLogin">Se connecter</button>                 
+          <button type="submit" class="btn btn-primary" id="btnLogin">Se connecter</button> 
+          <br>
+          <a type="submit" class="btn btn-link" id="linkRegister">Vous n'avez pas de compte ? S'inscrire</a>                
     `
     render(templateLogin)
+
+    const linkRegister = document.querySelector('#linkRegister')
+    linkRegister.addEventListener('click', ()=>{
+        registerForm()
+    })
+
+
     const loginBtn = document.querySelector('#btnLogin')
     loginBtn.addEventListener('click', ()=>{
         login()
         console.log('coucou')
     })
 }
-let userName = ""
+
 function login(){
     const username= document.querySelector('#username')
     const password= document.querySelector('#password')
@@ -81,30 +152,31 @@ function generateMessage(message){
     let content = `${message.content}`
 
     if (message.author.username==userName){
-        deleteButton = `<button type="button" class="btn btn-primary delete" id="${message.id}">Supprimer</button>`
-        editButton = `<button type="button" class="btn btn-secondary edit" id="${message.id}">Editer</button> `
+        deleteButton = `<i class="bi bi-trash3 delete fs-4" style="cursor: pointer;" id="${message.id}" ></i>`
+        editButton = `<i class="bi bi-pencil edit fs-4" style="cursor: pointer;" id="${message.id}"></i>`
     }else{
-        replyButton = `<button type="button" class="btn btn-secondary reply" id="${message.id}">Répondre</button> `
+        replyButton = `<i class="bi bi-arrow-up-right reply fs-5" style="cursor: pointer;" data-message-id="${message.id}" data-message-content="${content}"></i>`
     }
 
     let messageTemplate =`
         
         <div class="d-flex justify-content-between align-items-center mb-2 message" id="${message.id}">
            
-            <div class="fs-5 d-flex col-10">
+            <div class="fs-5 d-flex col-8">
                 <div class="col-4">${message.author.username} : </div> 
                 <div class="col-6">${content}</div>
                 
             </div>
             <div class="d-flex">
-               <div>${deleteButton}</div>
+               <div class="mr-1">${deleteButton}</div>
                 <div>${editButton}</div>
                 <div>${replyButton}</div>
             </div>
+          
             
         </div>
     `
-    replyButtons(content)
+
 
     return messageTemplate
 }
@@ -233,28 +305,47 @@ function editButtons() {
         button.addEventListener('click', () => {
             console.log("coucou")
             messageId = button.id
-            editContent = window.prompt("Entrez Votre modification")
+            editContent = window.prompt("Entrez Votre modification :")
             editMessage(editContent.toLowerCase(), messageId)
         })
     })
 }
 
 
-async function replyMessage(){
+async function replyMessage(contentReply, messageToReply, idMessage){
+    const replyMessage = {
+        content: messageToReply + " => " + contentReply
+    }
+    const messageParams = {
+        headers : {"Content-type":"application/json",
+            "Authorization":`Bearer ${token}`},
+        method : "POST",
+        body : JSON.stringify(replyMessage)
+    }
+
+    return await fetch(`https://b1messenger.imatrythis.com/api/responses/${idMessage}/new`, messageParams)
+        .then(response => response.json())
+        .then(data=>{
+            run();
+        })
 
 }
 
 
 function replyButtons() {
+    let replyContent = ""
+
     const replyButtons = document.querySelectorAll('.reply')
 
     replyButtons.forEach((button) => {
         button.addEventListener('click', () => {
             const messageId = button.dataset.messageId
-            console.log(message.id)
-
-
+            const messageContent = button.dataset.messageContent
+            console.log(`${messageContent}`)
+            replyContent = window.prompt("Entrez Votre réponse au message :")
+            replyMessage(replyContent.toLowerCase(),messageContent, messageId)
         })
     })
+
 }
 

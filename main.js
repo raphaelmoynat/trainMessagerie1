@@ -149,7 +149,7 @@ function generateMessage(message){
     let deleteButton = ""
     let editButton=""
     let replyButton = ""
-    let content = `${message.content}`
+
 
     if (message.author.username==userName){
         deleteButton = `<i class="bi bi-trash3 delete fs-4" style="cursor: pointer;" id="${message.id}" ></i>`
@@ -158,22 +158,41 @@ function generateMessage(message){
         replyButton = `<i class="bi bi-arrow-up-right reply fs-5" style="cursor: pointer;" data-message-id="${message.id}" data-message-content="${content}"></i>`
     }
 
+    let responsesContent = "";
+
+    if (message.responses && message.responses.length > 0) {
+        message.responses.forEach(response => {
+            if (response.author && response.content) {
+                responsesContent += `
+                    <div class="d-flex">
+                        <div class="me-1">${response.author.username}  : </div>
+                        <div class="">${response.content}</div>
+                    </div>`;
+            }
+        })
+    }
+
+
     let messageTemplate =`
         
         <div class="d-flex justify-content-between align-items-center mb-2 message" id="${message.id}">
-           
-            <div class="fs-5 d-flex col-8">
-                <div class="col-4">${message.author.username} : </div> 
-                <div class="col-6">${content}</div>
-                
-            </div>
-            <div class="d-flex">
-               <div class="mr-1">${deleteButton}</div>
-                <div>${editButton}</div>
-                <div>${replyButton}</div>
-            </div>
-          
+
+                <div class="fs-5 d-flex col-10">
             
+                        <div class="col-4">${message.author.username} : </div>
+                        <div class="col-6 d-flex flex-column">
+                            <div class="mb-2">${message.content}</div>
+                            ${responsesContent}
+                        </div>
+            
+                </div>
+                <div class="d-flex">
+                    <div class="mr-1">${deleteButton}</div>
+                    <div>${editButton}</div>
+                    <div>${replyButton}</div>
+                </div>
+
+
         </div>
     `
 
@@ -312,9 +331,9 @@ function editButtons() {
 }
 
 
-async function replyMessage(contentReply, messageToReply, idMessage){
+async function replyMessage(contentReply, idMessage){
     const replyMessage = {
-        content: messageToReply + " => " + contentReply
+        content: " "  + contentReply
     }
     const messageParams = {
         headers : {"Content-type":"application/json",
@@ -340,10 +359,8 @@ function replyButtons() {
     replyButtons.forEach((button) => {
         button.addEventListener('click', () => {
             const messageId = button.dataset.messageId
-            const messageContent = button.dataset.messageContent
-            console.log(`${messageContent}`)
             replyContent = window.prompt("Entrez Votre réponse au message :")
-            replyMessage(replyContent.toLowerCase(),messageContent, messageId)
+            replyMessage(replyContent.toLowerCase(), messageId)
         })
     })
 

@@ -2,6 +2,8 @@ let token = null
 let content = document.querySelector('.content')
 let messageId = null
 let userName = ""
+let myPicture = ""
+let navbar = document.querySelector('.navbar')
 
 registerForm()
 function run(){
@@ -24,8 +26,20 @@ function run(){
 
 
 function render(pageContent){
+    navbar.innerHTML=""
     content.innerHTML=""
-    content.innerHTML = pageContent
+    if (token!=null){
+        navbar.innerHTML += `<div class="container-fluid">
+        <a class="btn navbar-brand" href="#">Page de ${userName} <img src="${myPicture}" width="45px" height="45px" alt=""></a>
+        
+        <div>
+           
+            <button class="btn btn-success showProfile" type="submit">Modifier</button>
+        </div>
+    </div>`
+
+    }
+    content.innerHTML += pageContent
 }
 
 function registerForm(){
@@ -59,13 +73,11 @@ function registerForm(){
 
 }
 
-function register(){
-    const username= document.querySelector('#usernameRegister')
-    const password= document.querySelector('#passwordRegister')
+async function register(){
 
     let corpsRegister = {
-        username : username.value,
-        password : password.value
+        username : document.querySelector('#usernameRegister').value,
+        password : document.querySelector('#passwordRegister').value
     }
 
     let params = {
@@ -74,7 +86,7 @@ function register(){
         body : JSON.stringify(corpsRegister)
     }
 
-    fetch('https://b1messenger.imatrythis.com/register', params)
+    return await fetch('https://b1messenger.imatrythis.com/register', params)
         .then(response=>response.json())
         .then(data=>{
             if(data == "username already taken"){
@@ -117,13 +129,11 @@ function loginForm(){
     })
 }
 
-function login(){
-    const username= document.querySelector('#username')
-    const password= document.querySelector('#password')
+async function login(){
 
     let corpsLogin = {
-        username : username.value,
-        password : password.value
+        username : document.querySelector('#username').value,
+        password : document.querySelector('#password').value
     }
 
     let params = {
@@ -132,7 +142,7 @@ function login(){
         body : JSON.stringify(corpsLogin)
     }
 
-    fetch('https://b1messenger.imatrythis.com/login', params)
+    return await fetch('https://b1messenger.imatrythis.com/login', params)
         .then(response=>response.json())
         .then(data=>{
            if(data.message == "Invalid credentials."){
@@ -151,6 +161,8 @@ function generateMessage(message){
     let editButton=""
     let replyButton = ""
     let reactionButton=""
+    let image = ""
+
 
 
     if (message.author.username==userName){
@@ -168,7 +180,7 @@ function generateMessage(message){
             if (response.author && response.content) {
                 responsesContent += `
                     <div class="d-flex ">
-                        <div class="me-1 fs-6 col-5">${response.author.username}  : </div>
+                        <div class="me-1 fs-6 col-5">${response.author.displayName}  : </div>
                         <div class="fs-6 col-7">${response.content}</div>
                     </div>`
             }
@@ -176,13 +188,18 @@ function generateMessage(message){
     }
 
 
+
+
+
     let messageTemplate =`
         
         <div class="d-flex justify-content-between align-items-center mb-2 message" id="${message.id}">
 
                 <div class="fs-5 d-flex col-10">
-            
-                        <div class="col-4">${message.author.username} : </div>
+                        <div class="col-4 d-flex flex-column">
+                            <div>${message.author.displayName} : </div>
+                            <div class="fs-6">${message.author.username}</div>
+                        </div>
                         <div class="col-8 d-flex flex-column">
                             <div class="mb-2">${message.content}</div>
                             ${responsesContent}
@@ -211,6 +228,7 @@ function generateConv(messages){
     })
     render(contentConv)
     deleteButton()
+    buttonRenderProfile()
 
 }
 
@@ -226,6 +244,9 @@ async function fetchMessages(){
     return await fetch('https://b1messenger.imatrythis.com/api/messages', params)
         .then(response=>response.json())
         .then(data=>{
+            if (data.message === "Expired JWT Token") {
+                refreshToken()
+            }
             return data
         })
 
@@ -414,6 +435,141 @@ function reactionToMessageButtons() {
             });
         })
     })
+}
+
+async function refreshToken() {
+    const params =
+        {
+            method: 'POST',
+            headers: {'Content-type': 'application/json'},
+            body: JSON.stringify({"freshener": freshener})
+        }
+    fetch(`https://b1messenger.imatrythis.com/refreshthistoken`, params)
+        .then(response => response.json())
+        .then(data => {
+            token = data.token
+            freshener = data.freshener
+            run()
+        })
+
+}
+
+function buttonRenderProfile(){
+    const btnShowProfile= document.querySelector('.showProfile')
+    btnShowProfile.addEventListener('click', ()=>{
+        console.log('coucou')
+        renderProfile()
+    })
+}
+
+async function fetchProfil(){
+    const params = {
+        headers : {"Content-type":"application/json",
+            "Authorization":`Bearer ${token}`},
+        method : "PUT"
+    }
+
+
+    return await fetch(`https://b1messenger.imatrythis.com/api/profile/edit`, params)
+        .then(response=>response.json())
+        .then(data=>{
+            console.log(data)
+        })
+
+}
+
+function renderProfile() { //renvoie le profil utilisateur
+    let templateEditProfile = `              
+          <div class="mt-5">
+          <div class="mb-3"><h3>Modifier son profil</h3></div>
+            <label  class="form-label">Nom d'affichage</label>
+            <input type="text" placeholder="entrez votre nouveau nom" class="form-control" id="displayName">
+            <button type="submit" class="btn btn-primary mb-1" id="btnNom">Modifier Nom</button> 
+          <div class="mb-3 mt-3">
+            <label class="form-label">Image de Profil</label>
+            <input class="form-control" type="file" placeholder="entrez votre nouvelle image" id="profilePicture">
+          </div>
+          <button type="submit" class="btn btn-primary" id="btnImage">Modifier Image</button> 
+         
+                   
+    `
+    render(templateEditProfile)
+
+
+
+    addImageBtn()
+    const submitName = document.querySelector('#btnNom')
+    submitName.addEventListener('click', ()=>{
+        fetchEditName()
+    })
+}
+
+
+async function fetchEditName(nameInput){
+    let corps = {
+        displayName: document.querySelector('#displayName').value
+    }
+
+
+    const params = {
+        headers : {
+            'Content-type': 'application/json',
+            "Authorization":`Bearer ${token}`,
+        },
+        method : "PUT",
+        body: JSON.stringify(corps)
+
+    }
+
+    return await fetch(`https://b1messenger.imatrythis.com/api/profile/edit`, params)
+        .then(response=>response.json())
+        .then(data=>{
+            console.log(data)
+
+            run()
+        })
+
+}
+
+
+
+function addImageBtn(){
+    const imageInput = document.querySelector('#profilePicture')
+
+
+    const submitImage = document.querySelector('#btnImage')
+    submitImage.addEventListener('click', ()=>{
+
+        const imageFile = imageInput.files[0]
+
+        fetchAddImage(imageFile)
+    })
+
+}
+
+
+
+async function fetchAddImage(imageFile){
+    const formData = new FormData();
+    formData.append('profilepic', imageFile);
+
+
+    const params = {
+        headers : {"Authorization":`Bearer ${token}`,
+        },
+        method : "POST",
+        body: formData,
+    }
+
+    return await fetch(`https://b1messenger.imatrythis.com/api/profilepicture`, params)
+        .then(response=>response.json())
+        .then(data=>{
+            console.log(data)
+            if (data.image!=null){
+                myPicture = data.image.imageName
+            }
+            run()
+        })
 
 }
 
